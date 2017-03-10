@@ -1,0 +1,22 @@
+{
+  "name": "branded",
+  "version": "1.0.0",
+  "description": "Server side of a Branded, a multiplayer gamified Prisoner's Dilemma.",
+  "main": "./src/server.js",
+  "scripts": {
+    "start": "node ./src/server.js",
+    "pretest": "eslint ./src --fix",
+    "test": "echo \"Tests complete\""
+  },
+  "author": "Jesse Cooper",
+  "license": "ISC",
+  "dependencies": {
+    "socket.io": "^1.7.2",
+    "express": "^4.15.2"
+  },
+  "devDependencies": {
+    "eslint": "^3.15.0",
+    "eslint-config-airbnb": "^14.1.0",
+    "eslint-plugin-import": "^2.2.0"
+  }
+}

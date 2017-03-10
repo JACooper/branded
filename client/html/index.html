@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<script src="../js/client.js"></script>
+		<style>
+			textarea {
+				display: block;
+				background-color: #EEEEEE;
+			}
+		</style>
+	</head>
+	<body>
+		<label for="user">Username:</label>
+		<input id="user" name="user" type="text"/>
+		<label for="room">Room:</label>
+		<input id="room" name="room" type="text"/>
+		<input id="btnConnect" type="button" value="Join room"/>
+
+		<input id="btnStart" type="button" value="Start game"/>
+
+		<label for="action">Action:</label>
+		<input id="action" name="action" type="text"/>
+		<label for="target">Target:</label>
+		<input id="target" name="target" type="text"/>
+		<input id="btnAction" type="button" value="Confirm Action"/>
+
+		<textarea id="log" rows="30" cols="40" readonly>Please join a room and press start when ready.</textarea>
+	</body>
+</html>
