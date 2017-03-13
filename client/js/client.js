@@ -77,6 +77,7 @@ var actionHandler = void 0;
 var listUsersHandler = void 0;
 
 var startRoom = function startRoom(e, socket, user, room) {
+  document.querySelector('#btnAction').disabled = false;
   socket.emit('start', { roomname: room });
 };
 
