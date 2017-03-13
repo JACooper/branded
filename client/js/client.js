@@ -79,6 +79,7 @@ var listUsersHandler = void 0;
 var startRoom = function startRoom(e, socket, user, room) {
   document.querySelector('#btnAction').disabled = false;
   socket.emit('start', { roomname: room });
+  socket.emit('listUsers', { name: user, roomname: room });
 };
 
 var sendAction = function sendAction(e, socket, user, room, action) {
@@ -128,14 +129,15 @@ var connectSocket = function connectSocket(e) {
     console.log('Server says action confirmed: ' + data.confirm);
     // Disable turn controls
     if (data.confirm) {
-      action.disabled = true;
+      document.querySelector('#btnAction').disabled = true;
     }
   });
 
   socket.on('turnCount', function (data) {
     // Allow new action
     log.innerHTML += 'It is now turn ' + data.turnNum + '\n';
-    action.disabled = false;
+    document.querySelector('#btnAction').disabled = false;
+    socket.emit('listUsers', { name: user, roomname: room });
   });
 
   socket.on('acquittalCount', function (data) {
@@ -144,8 +146,20 @@ var connectSocket = function connectSocket(e) {
 
   socket.on('persuasionCount', function (data) {});
 
-  socket.on('playerList', function () {
+  socket.on('playerList', function (data) {
     // List current game players
+
+    // Probably a more efficient way of doing this. . .
+    var target = document.querySelector('#target');
+    for (var i = 0; i < target.length; i++) {
+      target.remove(i); // Remove old user list
+    }
+
+    for (var j = 0; j < data.list.length; j++) {
+      var opt = document.createElement("option");
+      opt.text = data.list[j];
+      target.add(opt);
+    }
   });
 
   socket.on('gameStarted', function () {
@@ -155,7 +169,9 @@ var connectSocket = function connectSocket(e) {
   startHandler = function startHandler() {
     return startRoom(e, socket, user, room);
   };
-  document.querySelector('#btnStart').addEventListener('click', startHandler);
+  var start = document.querySelector('#btnStart');
+  start.addEventListener('click', startHandler);
+  start.disabled = false;
 
   actionHandler = function actionHandler() {
     return sendAction(e, socket, user, room, action);
@@ -175,9 +191,22 @@ module.exports.connectSocket = connectSocket;
 
 var socketHandler = __webpack_require__(0);
 
+var toggleTarget = function toggleTarget(e) {
+	var action = document.querySelector('#action');
+	var target = document.querySelector('#target');
+	if (action.value === 'absolve' || action.value === 'confess') {
+		target.disabled = true;
+	} else {
+		target.disabled = false;
+	}
+};
+
 var init = function init() {
 	var connect = document.querySelector('#btnConnect');
 	connect.addEventListener('click', socketHandler.connectSocket);
+
+	var action = document.querySelector('#action');
+	action.addEventListener('change', toggleTarget);
 };
 
 window.onload = init;

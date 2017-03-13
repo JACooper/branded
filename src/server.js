@@ -20,21 +20,6 @@ app.get('/', (request, response) => {
   response.sendFile(`${__dirname}/../client/html/index.html`);
 });
 
-//  --  Some socket stuff
-
-/**
- * Gets all clients in a given room. Modified version of function from:
- *  http://stackoverflow.com/questions/6563885/socket-io-how-do-i-get-a-list-of-connected-sockets-clients
- * @param  {String} roomname  The name of a room to search
- * @return {Array}            The sockets in the given room
- */
-// const getRoomClients = (roomname) => {
-//   const room = io.sockets.adapter.rooms[roomname];
-//   // const clients = room.map(id => io.sockets.adapter.nsp.connected[id]);
-//   const clients =
-//   return clients;
-// };
-
 //  --  Game Logic
 
 /*
@@ -69,6 +54,7 @@ User object: {
   notifications: Array of String (game state updates)
  */
 const sessions = [];
+const roles = ['comrade', 'traitor'];
 
 const isTurnDone = (room) => {
   // returns false if any users have not yet gone
@@ -86,14 +72,14 @@ const processUser = (_user, _room) => {
   const room = _room;
 
   // Process user's own action
-  switch (user.action) {
+  switch (user.action.actionName) {
     case 'slander':
       user.guilt += 1;
       break;
     case 'indict':
       user.guilt += 1;
       break;
-    case 'vindicated':
+    case 'vindicate':
       user.innocence += 1;
       break;
     case 'condemn':
@@ -122,7 +108,7 @@ const processUser = (_user, _room) => {
         user.innocence -= 1;
         room.notifications.push(`${user.name} has been indicted.`);
         break;
-      case 'vindicated':
+      case 'vindicate':
         user.guilt -= 1;
         room.notifications.push(`${user.name} has been vindicated.`);
         break;
@@ -140,7 +126,7 @@ const processUser = (_user, _room) => {
   }
   user.effects = [];   // Empty out array to prepare for next turn
 
-  if (user.guilt >= room.lossThreshold) {
+  if (user.guilt >= room.lossThreshold && user.lost === false) {
     user.lost = true;
     room.notifications.push(`${user.name} has been branded guilty!`);
   }
@@ -178,7 +164,6 @@ const processTurn = (_room) => {
 
   // Check if all players lost, and send loss messages as appropriate regardless
   // NOTE: Not currently sending individual loss messages
-  // const clients = getRoomClients(room.roomname);
   const clients = io.sockets.sockets;
   const allGuilty = users.every(user => user.lost);
 
@@ -192,20 +177,20 @@ const processTurn = (_room) => {
     processEndGame(room, 'none');
 
     users.forEach((_user) => {
-      const user = room.users[_user];
+      const user = room.users[_user.name];
       clients[user.socketid].emit('loss', { });
     });
   } else if (groupWin) {
     if (comrades.length > 0) {
       comrades.forEach((_user) => {
-        const user = room.users[_user];
+        const user = room.users[_user.name];
         clients[user.socketid].emit('win', { });
       });
     }
 
     if (traitors.length > 0) {
       traitors.forEach((_user) => {
-        const user = room.users[_user];
+        const user = room.users[_user.name];
         clients[user.socketid].emit('loss', { });
       });
     }
@@ -214,14 +199,14 @@ const processTurn = (_room) => {
   } else if (individualWin) {
     if (traitors.length > 0) {
       traitors.forEach((_user) => {
-        const user = room.users[_user];
+        const user = room.users[_user.name];
         clients[user.socketid].emit('win', { });
       });
     }
 
     if (comrades.length > 0) {
       comrades.forEach((_user) => {
-        const user = room.users[_user];
+        const user = room.users[_user.name];
         clients[user.socketid].emit('loss', { });
       });
     }
@@ -247,12 +232,12 @@ const onJoin = (_socket) => {
     if (!sessions[data.roomname]) {
       sessions[data.roomname] = {
         roomname: data.roomname,
-        acquittal: 20,
+        acquittal: 1,
         users: { },
         active: false,
         gameOver: false,
         turnNum: 0,
-        lossThreshold: 10,
+        lossThreshold: 1,
         notifications: [],
       };
     }
@@ -260,7 +245,7 @@ const onJoin = (_socket) => {
     sessions[data.roomname].users[data.name] = {
       name: data.name,
       socketid: socket.id,
-      role: 'comrade',  // Will need to be randomized at some point
+      role: roles[Math.floor(Math.random() * roles.length)],  // Will need to be randomized at some point
       lost: false,
       won: false,
       hasGone: false,
@@ -331,13 +316,15 @@ const onList = (_socket) => {
   const socket = _socket;
 
   socket.on('listUsers', (data) => {
-    const room = data.roomname;
-    const usersInGame = [];
-    for (let i = 0; i < room.users.length; i++) {
-      usersInGame.push({
-        name: room.users[i].name,
-      });
+    const room = sessions[data.roomname];
+    const usersInGame = Object.keys(room.users);
+
+    // Remove requesting usser from list
+    const index = usersInGame.indexOf(data.name);
+    if (index > -1) {
+      usersInGame.splice(index, 1);
     }
+
     socket.emit('playerList', { list: usersInGame });
   });
 };
