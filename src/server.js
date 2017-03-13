@@ -245,7 +245,7 @@ const onJoin = (_socket) => {
     sessions[data.roomname].users[data.name] = {
       name: data.name,
       socketid: socket.id,
-      role: roles[Math.floor(Math.random() * roles.length)],  // Will need to be randomized at some point
+      role: roles[Math.floor(Math.random() * roles.length)],
       lost: false,
       won: false,
       hasGone: false,
