@@ -196,27 +196,35 @@ const processTurn = (_room) => {
       clients[user.socketid].emit('loss', { });
     });
   } else if (groupWin) {
-    comrades.forEach((_user) => {
-      const user = room.users[_user];
-      clients[user.socketid].emit('win', { });
-    });
+    if (comrades.length > 0) {
+      comrades.forEach((_user) => {
+        const user = room.users[_user];
+        clients[user.socketid].emit('win', { });
+      });
+    }
 
-    traitors.forEach((_user) => {
-      const user = room.users[_user];
-      clients[user.socketid].emit('loss', { });
-    });
+    if (traitors.length > 0) {
+      traitors.forEach((_user) => {
+        const user = room.users[_user];
+        clients[user.socketid].emit('loss', { });
+      });
+    }
 
     processEndGame(room, 'comrades');
   } else if (individualWin) {
-    traitors.forEach((_user) => {
-      const user = room.users[_user];
-      clients[user.socketid].emit('win', { });
-    });
+    if (traitors.length > 0) {
+      traitors.forEach((_user) => {
+        const user = room.users[_user];
+        clients[user.socketid].emit('win', { });
+      });
+    }
 
-    comrades.forEach((_user) => {
-      const user = room.users[_user];
-      clients[user.socketid].emit('loss', { });
-    });
+    if (comrades.length > 0) {
+      comrades.forEach((_user) => {
+        const user = room.users[_user];
+        clients[user.socketid].emit('loss', { });
+      });
+    }
 
     processEndGame(room, 'traitors');
   } else {
@@ -293,6 +301,7 @@ const onAction = (_socket) => {
     const action = data.action;
 
     // First perform validity checks on all the passed params & check if user lost
+    //  Note that this includes checking that user can actually *perform* action
 
     // Next, add action to queue if user hasn't gone yet
     const currRoom = sessions[room];
