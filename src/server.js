@@ -31,7 +31,7 @@ app.get('/', (request, response) => {
 // const getRoomClients = (roomname) => {
 //   const room = io.sockets.adapter.rooms[roomname];
 //   // const clients = room.map(id => io.sockets.adapter.nsp.connected[id]);
-//   const clients = 
+//   const clients =
 //   return clients;
 // };
 
@@ -72,13 +72,18 @@ const sessions = [];
 
 const isTurnDone = (room) => {
   // returns false if any users have not yet gone
-  const turnDone = Object.keys(room.users).every(user => (room.users[user].hasGone && !room.users[user].lost));
+  const remainingUsers = Object.keys(room.users).filter((userid) => {
+    const user = room.users[userid];
+    return !(user.hasGone || user.lost);
+  });
 
+  const turnDone = !(remainingUsers.length > 0);
   return turnDone;
 };
 
-const processUser = (_user) => {
+const processUser = (_user, _room) => {
   const user = _user;
+  const room = _room;
 
   // Process user's own action
   switch (user.action) {
@@ -99,8 +104,8 @@ const processUser = (_user) => {
       break;
     case 'absolve':
       user.innocence -= 1;
-      this.room.acquittal -= 1;
-      this.room.notifications.push('Someone has absolved the group.');
+      room.acquittal -= 1;
+      room.notifications.push('Someone has absolved the group.');
       break;
     default:
       break;
@@ -111,23 +116,23 @@ const processUser = (_user) => {
     switch (user.effects[i]) {
       case 'slander':
         user.status -= 1;
-        this.room.notifications.push(`${user.name} has been slandered.`);
+        room.notifications.push(`${user.name} has been slandered.`);
         break;
       case 'indict':
         user.innocence -= 1;
-        this.room.notifications.push(`${user.name} has been indicted.`);
+        room.notifications.push(`${user.name} has been indicted.`);
         break;
       case 'vindicated':
         user.guilt -= 1;
-        this.room.notifications.push(`${user.name} has been vindicated.`);
+        room.notifications.push(`${user.name} has been vindicated.`);
         break;
       case 'condemn':
         user.guilt += 1;
-        this.room.notifications.push(`${user.name} has been condemned.`);
+        room.notifications.push(`${user.name} has been condemned.`);
         break;
       case 'confess':
         user.status += 1;
-        this.room.notifications.push('Someone has confessed.');
+        room.notifications.push('Someone has confessed.');
         break;
       default:
         break;
@@ -135,9 +140,9 @@ const processUser = (_user) => {
   }
   user.effects = [];   // Empty out array to prepare for next turn
 
-  if (user.guilt >= this.room.lossThreshold) {
+  if (user.guilt >= room.lossThreshold) {
     user.lost = true;
-    this.room.notifications.push(`${user.name} has been branded guilty!`);
+    room.notifications.push(`${user.name} has been branded guilty!`);
   }
 };
 
@@ -163,7 +168,9 @@ const processTurn = (_room) => {
   // Insert random server action
 
   // Process (and randomize order of) all actions
-  room.users.forEach(processUser.bind({ room }));
+  const users = Object.keys(room.users).map(userid => room.users[userid]);
+
+  users.forEach(user => processUser(user, room));
 
   room.notifications.forEach((notification) => {
     io.sockets.in(room.roomname).emit('notification', { msg: notification });
@@ -173,18 +180,18 @@ const processTurn = (_room) => {
   // NOTE: Not currently sending individual loss messages
   // const clients = getRoomClients(room.roomname);
   const clients = io.sockets.sockets;
-  const allGuilty = Object.keys(room.users).every(user => room.users[user].lost);
+  const allGuilty = users.every(user => user.lost);
 
-  const comrades = Object.keys(room.users).map(user => (room.users[user].role.toLowerCase() === 'comrade' && !room.users[user].lost));
+  const comrades = users.filter(user => (user.role.toLowerCase() === 'comrade' && !user.lost));
   const groupWin = room.acquittal <= 0;
 
-  const traitors = Object.keys(room.users).map(user => (room.users[user].role.toLowerCase() === 'traitor' && !room.users[user].lost));
-  const individualWin = !(traitors.every(user => (room.users[user].persuasion > 0)));
+  const traitors = users.filter(user => (user.role.toLowerCase() === 'traitor' && !user.lost));
+  const individualWin = !(traitors.every(user => (user.persuasion > 0)));
 
   if (allGuilty) {
     processEndGame(room, 'none');
 
-    Object.keys(room.users).forEach((_user) => {
+    users.forEach((_user) => {
       const user = room.users[_user];
       clients[user.socketid].emit('loss', { });
     });
@@ -214,7 +221,7 @@ const processTurn = (_room) => {
     processEndGame(room, 'traitors');
   } else {
     room.turnNum += 1;
-    Object.keys(room.users).forEach((_user) => {
+    users.forEach((_user) => {
       const user = _user;
       user.hasGone = false; // Reset turn track
     });
@@ -260,9 +267,7 @@ const onJoin = (_socket) => {
     socket.join(data.roomname);
 
     io.sockets.in(data.roomname).emit('notification', { msg: `${data.name} has joined the game.` });
-    socket.emit('notification',
-      { msg: `Your role is that of a ${sessions[data.roomname].users[data.name].role}.`}
-    );
+    socket.emit('notification', { msg: `Your role is that of a ${sessions[data.roomname].users[data.name].role}.` });
   });
 };
 
