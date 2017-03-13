@@ -28,18 +28,19 @@ app.get('/', (request, response) => {
  * @param  {String} roomname  The name of a room to search
  * @return {Array}            The sockets in the given room
  */
-const getRoomClients = (roomname) => {
-  const room = io.sockets.adapter.rooms[roomname];
-  const clients = room.map(id => io.sockets.adapter.nsp.connected[id]);
-
-  return clients;
-};
+// const getRoomClients = (roomname) => {
+//   const room = io.sockets.adapter.rooms[roomname];
+//   // const clients = room.map(id => io.sockets.adapter.nsp.connected[id]);
+//   const clients = 
+//   return clients;
+// };
 
 //  --  Game Logic
 
 /*
 User object: {
   name: String  (what the object is keyed to)
+  socketID: String  (id of the socket the user is connected with)
   role: String  (the role of the player)
   lost: boolean (whether or not they can still take actions)
   won: boolean (whether or not they won the game)
@@ -71,7 +72,7 @@ const sessions = [];
 
 const isTurnDone = (room) => {
   // returns false if any users have not yet gone
-  const turnDone = room.users.every(user => (user.hasGone && !user.lost));
+  const turnDone = Object.keys(room.users).every(user => (room.users[user].hasGone && !room.users[user].lost));
 
   return turnDone;
 };
@@ -145,6 +146,7 @@ const processEndGame = (room, winner) => {
   console.dir(winner);  // Deal with this later
   const players = [];
 
+  // WILL NOT WORK B/c users indexed on name, not an array
   for (let i = 0; i < room.users.length; i++) {
     players[i] = {
       name: room.users[i].name,
@@ -168,44 +170,51 @@ const processTurn = (_room) => {
   });
 
   // Check if all players lost, and send loss messages as appropriate regardless
-  const clients = getRoomClients(room.roomname);
-  const allGuilty = room.users.every(user => user.lost);
+  // NOTE: Not currently sending individual loss messages
+  // const clients = getRoomClients(room.roomname);
+  const clients = io.sockets.sockets;
+  const allGuilty = Object.keys(room.users).every(user => room.users[user].lost);
 
-  const comrades = room.users.map(user => (user.role.toLowerCase() === 'comrade' && !user.lost));
+  const comrades = Object.keys(room.users).map(user => (room.users[user].role.toLowerCase() === 'comrade' && !room.users[user].lost));
   const groupWin = room.acquittal <= 0;
 
-  const traitors = room.users.map(user => (user.role.toLowerCase() === 'traitor' && !user.lost));
-  const individualWin = !(traitors.every(user => (user.persuasion > 0)));
+  const traitors = Object.keys(room.users).map(user => (room.users[user].role.toLowerCase() === 'traitor' && !room.users[user].lost));
+  const individualWin = !(traitors.every(user => (room.users[user].persuasion > 0)));
 
   if (allGuilty) {
     processEndGame(room, 'none');
 
-    room.users.forEach((user) => {
-      clients[user.name].emit('loss', { });
+    Object.keys(room.users).forEach((_user) => {
+      const user = room.users[_user];
+      clients[user.socketid].emit('loss', { });
     });
   } else if (groupWin) {
-    comrades.forEach((user) => {
-      clients[user.name].emit('win', { });
+    comrades.forEach((_user) => {
+      const user = room.users[_user];
+      clients[user.socketid].emit('win', { });
     });
 
-    traitors.forEach((user) => {
-      clients[user.name].emit('loss', { });
+    traitors.forEach((_user) => {
+      const user = room.users[_user];
+      clients[user.socketid].emit('loss', { });
     });
 
     processEndGame(room, 'comrades');
   } else if (individualWin) {
-    traitors.forEach((user) => {
-      clients[user.name].emit('win', { });
+    traitors.forEach((_user) => {
+      const user = room.users[_user];
+      clients[user.socketid].emit('win', { });
     });
 
-    comrades.forEach((user) => {
-      clients[user.name].emit('loss', { });
+    comrades.forEach((_user) => {
+      const user = room.users[_user];
+      clients[user.socketid].emit('loss', { });
     });
 
     processEndGame(room, 'traitors');
   } else {
     room.turnNum += 1;
-    room.users.forEach((_user) => {
+    Object.keys(room.users).forEach((_user) => {
       const user = _user;
       user.hasGone = false; // Reset turn track
     });
@@ -219,13 +228,13 @@ const onJoin = (_socket) => {
   const socket = _socket;
 
   socket.on('join', (data) => {
-    // Initialize session
+    // Initialize session if necessary
     if (!sessions[data.roomname]) {
       sessions[data.roomname] = {
         roomname: data.roomname,
         acquittal: 20,
-        users: [],
-        active: true,   // For now
+        users: { },
+        active: false,
         gameOver: false,
         turnNum: 0,
         lossThreshold: 10,
@@ -233,8 +242,9 @@ const onJoin = (_socket) => {
       };
     }
 
-    sessions[data.roomname].users.push({
+    sessions[data.roomname].users[data.name] = {
       name: data.name,
+      socketid: socket.id,
       role: 'comrade',  // Will need to be randomized at some point
       lost: false,
       won: false,
@@ -245,7 +255,14 @@ const onJoin = (_socket) => {
       persuasion: 0,
       action: { },
       effects: [],
-    });
+    };
+
+    socket.join(data.roomname);
+
+    io.sockets.in(data.roomname).emit('notification', { msg: `${data.name} has joined the game.` });
+    socket.emit('notification',
+      { msg: `Your role is that of a ${sessions[data.roomname].users[data.name].role}.`}
+    );
   });
 };
 
@@ -265,7 +282,7 @@ const onAction = (_socket) => {
   const socket = _socket;
 
   socket.on('action', (data) => {
-    const room = data.room;
+    const room = data.roomname;
     const actingUser = data.name;
     const targetedUser = data.target;
     const action = data.action;
@@ -300,7 +317,7 @@ const onList = (_socket) => {
   const socket = _socket;
 
   socket.on('listUsers', (data) => {
-    const room = data.room;
+    const room = data.roomname;
     const usersInGame = [];
     for (let i = 0; i < room.users.length; i++) {
       usersInGame.push({
