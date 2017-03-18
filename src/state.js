@@ -21,9 +21,10 @@ User object: {
   effects: Array of String (what actions were taken against them this turn)
 }
 */
-// const users = [];  // Won't actually be a "global" object like this, will be per room
-//
+
+
 /*
+Session object: {
   roomname: String (the roomname, as referred to in socket io, of this session)
   acquittal: int (the remaining amount of innocence all players need to win)
   users: Array of type user (see above) (the users in the session)
@@ -32,8 +33,10 @@ User object: {
   turnNum: int (how many turns have passed)
   lossThreshold: int (how much guilt users need to lose)  -- May be removed
   notifications: Array of String (game state updates)
- */
-const sessions = [];
+}
+*/
+
+const sessions = { };
 const roles = ['comrade', 'traitor'];
 
 const getSessions = () => sessions;
@@ -46,6 +49,14 @@ const processAction = (_room) => {
   }
 };
 
+const removeUser = (_roomname, _name) => {
+  const room = sessions[_roomname];
+  delete room.users[_name];
+
+  logic.handleUserRemoved(room);
+};
+
 module.exports.sessions = getSessions;
 module.exports.roles = getRoles;
 module.exports.processAction = processAction;
+module.exports.removeUser = removeUser;
