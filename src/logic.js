@@ -187,7 +187,7 @@ const processTurn = (_room) => {
       broadcaster.socketEmit(user.socketid, 'branded', { });
     });
 
-    broadcaster.roomEmit(room.roomname, 'turnCount', { turnNum: room.turnNum });
+    broadcaster.roomEmit(room.roomname, 'turn-count', { turnNum: room.turnNum });
   }
 };
 
@@ -205,6 +205,7 @@ const handleUserRemoval = (_room) => {
 
   // If only one player is left
   if (users.length <= 1 || activeUsers.length <= 1) {
+    room.active = false;
     processEndGame(room, users);
   }
 };

@@ -6,16 +6,7 @@ const onCreateRoom = (_socket) => {
   const socket = _socket;
 
   socket.on('create-room', (data) => {
-    console.log(data);
-  });
-};
-
-const onJoin = (_socket) => {
-  const socket = _socket;
-
-  socket.on('join', (data) => {
     const sessions = game.sessions();
-    const roles = game.roles();
 
     // Initialize session if necessary
     if (!sessions[data.roomname]) {
@@ -31,30 +22,57 @@ const onJoin = (_socket) => {
       };
     }
 
-    sessions[data.roomname].users[data.name] = {
-      name: data.name,
-      socketid: socket.id,
-      role: roles[Math.floor(Math.random() * roles.length)],
-      lost: false,
-      won: false,
-      hasGone: false,
-      innocence: 0,
-      guilt: 0,
-      status: 0,
-      persuasion: 10,
-      action: { },
-      effects: [],
-    };
+    // While we're here, check if there are any rooms that needs to be cleaned up
+    const roomids = Object.keys(sessions);
+    const rooms = roomids.map((id) => sessions[id]);
 
-    socket.join(data.roomname);
-
-    broadcaster.roomEmit(data.roomname, 'notification', {
-      msg: `${data.name} has joined the game.`,
+    // NOTE: This might cause issues. . .
+    rooms.forEach((_room) => {
+      if (_room.gameOver) {
+        delete sessions[_room.roomname];
+      }
     });
+  });
+};
 
-    broadcaster.socketEmit(socket.id, 'notification', {
-      msg: `You are a ${sessions[data.roomname].users[data.name].role}.`,
-    });
+const onJoin = (_socket) => {
+  const socket = _socket;
+
+  socket.on('join', (data) => {
+    const sessions = game.sessions();
+    const roles = game.roles();
+
+    // Initialize session if necessary
+    if (sessions[data.roomname]) {
+      sessions[data.roomname].users[data.name] = {
+        name: data.name,
+        socketid: socket.id,
+        role: roles[Math.floor(Math.random() * roles.length)],
+        lost: false,
+        won: false,
+        hasGone: false,
+        innocence: 0,
+        guilt: 0,
+        status: 0,
+        persuasion: 10,
+        action: { },
+        effects: [],
+      };
+
+      socket.join(data.roomname);
+
+      broadcaster.roomEmit(data.roomname, 'notification', {
+        msg: `${data.name} has joined the game.`,
+      });
+
+      broadcaster.socketEmit(socket.id, 'notification', {
+        msg: `You are a ${sessions[data.roomname].users[data.name].role}.`,
+      });
+    } else {
+      broadcaster.socketEmit(socket.id, 'notification', {
+        msg: `Could not find requested room!`,
+      });
+    }
   });
 };
 
@@ -115,7 +133,7 @@ const onAction = (_socket) => {
           actionName: action,
           target: targetedUser,
         };
-        
+
         // Double check to make sure user still exists
         if (currRoom.users[targetedUser]) {
           currRoom.users[targetedUser].effects.push(action);
@@ -136,7 +154,7 @@ const onAction = (_socket) => {
 const onGetStats = (_socket) => {
   const socket = _socket;
 
-  socket.on('getStats', (data) => {
+  socket.on('get-stats', (data) => {
     const sessions = game.sessions();
     const room = sessions[data.roomname];
     const user = room.users[data.name];
@@ -153,7 +171,7 @@ const onGetStats = (_socket) => {
 const onList = (_socket) => {
   const socket = _socket;
 
-  socket.on('listUsers', (data) => {
+  socket.on('list-users', (data) => {
     const sessions = game.sessions();
     const room = sessions[data.roomname];
     const usersInGame = Object.keys(room.users);
@@ -164,7 +182,7 @@ const onList = (_socket) => {
       usersInGame.splice(index, 1);
     }
 
-    broadcaster.socketEmit(socket.id, 'playerList', { list: usersInGame });
+    broadcaster.socketEmit(socket.id, 'player-list', { list: usersInGame });
   });
 };
 
@@ -172,7 +190,7 @@ const leaveGame = (_roomname, _name) => {
   // delete room.users[_name];
   game.removeUser(_roomname, _name);
 
-  broadcaster.roomEmit(_roomname, 'userLeft', { name: _name });
+  broadcaster.roomEmit(_roomname, 'user-left', { name: _name });
 };
 
 const leaveRoom = (_socket, _roomname) => {
@@ -185,6 +203,7 @@ const onLeave = (_socket) => {
   socket.on('leave', (data) => {
     leaveGame(data.roomname, data.name);
     leaveRoom(socket, data.roomname);
+    broadcaster.socketEmit(socket.id, 'player-list', { list: usersInGame });
   });
 };
 
@@ -217,6 +236,7 @@ const onDisconnect = (_socket) => {
     if (user !== null) {
       leaveGame(roomname, user.name);
       leaveRoom(socket, roomname);
+      broadcaster.socketEmit(socket.id, 'player-list', { list: usersInGame });
     }
 
     // Kill connection
