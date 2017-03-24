@@ -123,7 +123,7 @@ const processTurn = (_room) => {
   // Insert random server action
   addServerAction(users);
 
-  users.forEach(user => processUser(user, room));
+  users.forEach(user => processUser(room, user));
 
   room.notifications.forEach((notification) => {
     broadcaster.roomEmit(room.roomname, 'notification', { msg: notification });
@@ -180,6 +180,14 @@ const processTurn = (_room) => {
     users.forEach((_user) => {
       const user = _user;
       user.hasGone = false; // Reset turn track
+      broadcaster.socketEmit(user.socketid, 'stats', {
+        guilt: user.guilt,
+        maxGuilt: room.lossThreshold,
+        innocence: user.innocence,
+        status: user.status,
+        acquittal: room.acquittal,
+        persuasion: user.persuasion,
+      });
     });
 
     branded.forEach((_user) => {
@@ -204,10 +212,12 @@ const handleUserRemoval = (_room) => {
   const activeUsers = users.filter(user => (!user.lost));
 
   // If only one player is left
-  if (users.length <= 1 || activeUsers.length <= 1) {
+  if ((users.length === 1 || activeUsers.length === 1) && room.active) {
     room.active = false;
     processEndGame(room, users);
   }
+
+  return users.length;
 };
 
 module.exports.isTurnDone = isTurnDone;

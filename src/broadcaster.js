@@ -7,8 +7,19 @@ const roomEmit = (roomname, emitname, dataobj) => {
 
 const socketEmit = (socketid, emitname, dataobj) => {
   const sockets = _io.sockets();
-  sockets[socketid].emit(emitname, dataobj);
+  if (Object.keys(sockets).length > 0) {
+    sockets[socketid].emit(emitname, dataobj);
+  }
+};
+
+const ioEmit = (emitname, dataobj) => {
+  const sockets = _io.sockets();
+  const socketids = Object.keys(sockets);
+  socketids.forEach((socketid) => {
+    sockets[socketid].emit(emitname, dataobj);
+  });
 };
 
 module.exports.roomEmit = roomEmit;
 module.exports.socketEmit = socketEmit;
+module.exports.ioEmit = ioEmit;

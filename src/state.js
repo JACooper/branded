@@ -30,6 +30,7 @@ Session object: {
   users: Array of type user (see above) (the users in the session)
   active: bool (if the game has started)
   gameOver: bool (if an active game has finished) -- May be removed later
+  maxPlayers: Int (maximum number of players that can be in the game)
   turnNum: int (how many turns have passed)
   lossThreshold: int (how much guilt users need to lose)  -- May be removed
   notifications: Array of String (game state updates)
@@ -53,7 +54,10 @@ const removeUser = (_roomname, _name) => {
   const room = sessions[_roomname];
   delete room.users[_name];
 
-  logic.handleUserRemoved(room);
+  const usersLeft = logic.handleUserRemoval(room);
+  if (usersLeft < 1) {
+    delete sessions[_roomname];
+  }
 };
 
 module.exports.sessions = getSessions;

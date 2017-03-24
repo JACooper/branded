@@ -1,41 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
+	    <meta charset="utf-8" />
+	    <title>Branded</title>
+
     	<script src="/socket.io/socket.io.js"></script>
 		<script src="../js/client.js"></script>
-		<style>
+		<!-- <style>
 			textarea {
 				display: block;
 				background-color: #EEEEEE;
 			}
-		</style>
+		</style> -->
 	</head>
 	<body>
-		<label for="user">Username:</label>
-		<input id="user" name="user" type="text"/>
-		<label for="room">Room:</label>
-		<input id="room" name="room" type="text"/>
-		<input id="btnConnect" type="button" value="Join room"/>
+		<div id="createRoomWrapper">
+	        <form id="createRoom" action="/createRoom">
+	            <input id="roomname" type="text" name="roomname" placeholder="Enter a room name" />
 
-		<input id="btnStart" type="button" value="Start game" disabled/>
+	            <input  id="btnCreate" type="submit" value="Create room" />
+	        </form>
+		</div>
 
-		<label for="action">Action:</label>
-		<select id="action">
-			<option value="slander">slander</option>
-			<option value="indict">indict</option>
-			<option value="vindicate">vindicate</option>
-			<option value="condemn">condemn</option>
-			<option value="confess">confess</option>
-			<option value="backstab">backstab</option>
-			<option value="absolve">absolve</option>
-		</select>
-		<!-- <input id="action" name="action" type="text"/> -->
-		<label for="target">Target:</label>
-		<select id="target">
-		</select>
-		<!-- <input id="target" name="target" type="text"/> -->
-		<input id="btnAction" type="button" value="Confirm Action" disabled/>
+		<div id="joinGameWrapper">
+			<div id="roomInfo"></div>
+			<form id="joinGame" action="/joinGame">
+				<input id="room" name="room" type="text" readonly />
+				<input id="user" name="user" type="text" placeholder="Enter username" />
 
-		<textarea id="log" rows="30" cols="40" readonly>Please join a room and press start when ready.</textarea>
+				<input id="btnJoin" type="submit" value="Join room" />
+			</form>
+		</div>
+
+		<div id="gameWrapper">
+			<div id="roomControls">
+				<input id="btnNewRoom" type="button" value="Make a new room"/>
+				<span>Available rooms:</span>
+				<ul id="roomList"></ul>
+			</div>
+
+			<div id="divider"></div>
+
+			<div id="gameControls">
+				<input id="btnStart" type="button" value="Start game" disabled />
+				
+				<br />
+
+				<div id="statDisplay">
+					<label for="guilt">Guilt:</label>
+					<input class="statbox" id="guilt" type="text" readonly />
+					<label for="innocence">Innocence:</label>
+					<input class="statbox" id="innocence" type="text" readonly />
+					<label for="status">Status:</label>
+
+					<input class="statbox" id="status" type="text" readonly />
+					<label for="acquittal">Acquittal:</label>
+					<input class="statbox" id="acquittal" type="text" readonly />
+					<label for="persuasion">Persuasion:</label>
+					<input class="statbox" id="persuasion" type="text" readonly />
+				</div>
+
+				<br />
+				<div id="actionControls">
+					<label for="action">Action:</label>
+					<select id="action">
+						<option value="slander">slander</option>
+						<option value="indict">indict</option>
+						<option value="vindicate">vindicate</option>
+						<option value="condemn">condemn</option>
+						<option value="confess">confess</option>
+						<option value="backstab">backstab</option>
+						<option value="absolve">absolve</option>
+					</select>
+					<label for="target">Target:</label>
+					<select id="target">
+					</select>
+					<input id="btnAction" type="button" value="Confirm Action" disabled/>
+				</div>
+
+				<br />
+
+				<textarea id="log" rows="30" cols="40" readonly></textarea>
+			</div>
+		</div>
 	</body>
 </html>
