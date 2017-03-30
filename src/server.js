@@ -9,7 +9,6 @@ const server = app.listen(port, () => {
   console.log(`Listening on 127.0.0.1: ${port}`);
 });
 
-// io.init(server);
 receiver.init(server);
 
 //  --  HTTP stuff

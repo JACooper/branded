@@ -1,25 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-	    <meta charset="utf-8" />
-	    <title>Branded</title>
+		<meta charset="utf-8" />
+		<title>Branded</title>
 
-    	<script src="/socket.io/socket.io.js"></script>
+		<script src="/socket.io/socket.io.js"></script>
 		<script src="../js/client.js"></script>
-		<!-- <style>
-			textarea {
-				display: block;
-				background-color: #EEEEEE;
-			}
-		</style> -->
 	</head>
 	<body>
 		<div id="createRoomWrapper">
-	        <form id="createRoom" action="/createRoom">
-	            <input id="roomname" type="text" name="roomname" placeholder="Enter a room name" />
+			<form id="createRoom" action="/createRoom">
+				<input id="roomname" type="text" name="roomname" placeholder="Enter a room name" />
 
-	            <input  id="btnCreate" type="submit" value="Create room" />
-	        </form>
+				<input  id="btnCreate" type="submit" value="Create room" />
+			</form>
 		</div>
 
 		<div id="joinGameWrapper">
@@ -43,6 +37,7 @@
 
 			<div id="gameControls">
 				<input id="btnStart" type="button" value="Start game" disabled />
+				<input id="btnRules" type="button" value="Show rules" />
 				
 				<br />
 
@@ -80,8 +75,25 @@
 
 				<br />
 
-				<textarea id="log" rows="30" cols="40" readonly></textarea>
+				<textarea id="log" rows="30" cols="80" readonly></textarea>
 			</div>
+		</div>
+
+		<div id="rulesWrapper">
+			<input id="btnCloseRules" type="button" value="X"/>
+			<h2>How to play</h2>
+			<p>In Branded, players assume the role of a susepct in an interrogation scenario. Players are either Comrades or Traitors; the former win when the game's "Acquittal" count goes to 0, and the latter win when their own personal "Persuasion" count goes to 0. Player's lose if their "Guilt" reaches 10.</p>
+			<p>Every turn, all players will choose one action to perform. Once all players have chosen an actions, the game itself will also take a random action, simulating player mistruct. All actions will be processed, and then a new turn will begin. The player has a variety of actions they can choose:</p>
+			<ul>
+				<li>Slander 	- Reduce target player's Status by 1, and increase own Guilt by 1.</li>
+				<li>Idict		- Reduce target player's Innocence by 1, and increase own Guilt by 1.</li>
+				<li>Vindicate 	- Reduce target player's Guilt by 1, and increase own Innocence by 1.</li>
+				<li>Condemn 	- Increate target player's Guilt by 1, and decrease own Innocence by 1.</li>
+				<li>Confess 	- Increate own Status by 1, and decrease own Innocence by 1.</li>
+				<li>Backstab 	- Reduce own Status by 1, reduce personal Persuasion count by 1.</li>
+				<li>Absolve 	- Reduce own Innocence by 1, reduce room's Acquittal count by 1.</li>
+			</ul>
+			<p>Generally speaking, players need to Vindicate others to generate Innocence, at which point they can spend it to further their own goals (which may or may not align with those of the group). Comrades will want to get Innocence to Absolve, and Traitors will want to keep their intentions hidden, but ultimately Confess & Backstab the group.</p>
 		</div>
 	</body>
 </html>

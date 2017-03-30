@@ -64,15 +64,21 @@ const processUser = (_room, _user) => {
   for (let i = 0; i < user.effects.length; i++) {
     switch (user.effects[i]) {
       case 'slander':
-        user.status -= 1;
+        if (user.status > 0) {
+          user.status -= 1;
+        }
         room.notifications.push(`${user.name} has been slandered.`);
         break;
       case 'indict':
-        user.innocence -= 1;
+        if (user.innocence > 0) {
+          user.innocence -= 1;
+        }
         room.notifications.push(`${user.name} has been indicted.`);
         break;
       case 'vindicate':
-        user.guilt -= 1;
+        if (user.guilt > 0) {
+          user.guilt -= 1;
+        }
         room.notifications.push(`${user.name} has been vindicated.`);
         break;
       case 'condemn':
@@ -128,6 +134,9 @@ const processTurn = (_room) => {
   room.notifications.forEach((notification) => {
     broadcaster.roomEmit(room.roomname, 'notification', { msg: notification });
   });
+
+  // Clear turn's notifications
+  room.notifications = [];
 
   // Check if all players lost, and send loss messages as appropriate regardless
   const branded = users.filter(user => user.lost);
